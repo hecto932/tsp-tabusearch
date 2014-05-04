@@ -27,7 +27,7 @@ const int _EWT_     = 20;
 const int _N_ 		= 1000;
 
 //DEFINICIONES
-typedef pair<double, double> coordenadas; 					//PAR DE DOBLES
+typedef pair<double, double> coordenadas; 					//PAR DE DOBLES (double, double)
 typedef vector<pair<string,coordenadas> >::iterator itl; 	//ITERADOR VECTOR DE PAR(STRING, PAR DE DOBLES)
 typedef vector<bool>::iterator itlb;						//ITERADOR DE VECTOR DE MARCAS
 
@@ -39,7 +39,6 @@ long long int dimension;					//DIMENSION
 char edge_weight_type[_EWT_];				//2D o 3D
 vector<pair<string,coordenadas> > nodos; 	//VECTOR DE NODOS
 vector<vector<double> > m; 					//VECTOR DE DISTANCIAS EUCLIDIANAS 2D 
-vector<pair<int,int> > T;					//LISTA TABU
 
 
 //CARGA DE DATOS
@@ -130,7 +129,7 @@ void show_matrix_distance()
 	{
 		for(int j=0;j<dimension;++j)
 		{
-			cout << m[i][j] << " ";
+			cout << m[i][j] << "|\t";
 		}
 		cout << endl;
 	}
@@ -154,40 +153,108 @@ bool all_cities_visited(vector<bool> marcas)
 }
 
 //DEVUELVE UNA LISTA DEL CAMINO MAS CORTO
-vector<string> vecino_mas_cercano()
+vector<int> vecino_mas_cercano()
 {
+	srand (time(NULL));//INICIALIZANDO UNA SEMILLA RANDOM
+
 	vector<bool> marcas(dimension,false); 	//VECTOR DE MARCAS
 	vector<string> camino; 					//STRING DEL CAMINO
+	vector<int> indices_camino;				//CAMINO EN INIDICES
 	camino.clear();							//LIMPIAMOS EL VECTOR
+	indices_camino.clear();
 
 	int vertice = rand() % dimension;			//ESCOGEMOS UN VERTICE DE INICIO
+	int vertice_final = vertice;				//A DONDE DEBO REGRESAR
 	marcas[vertice] = true;						//LO MARCAMOS COMO VISITADOS
 	camino.push_back(get_name_node(vertice));	//LO AGREGAMOS AL CAMINO
+	indices_camino.push_back(vertice);
 	
 	while(!all_cities_visited(marcas))						//SI TODAS LAS CIUDADES NO HAN SIDO VISITADAS
 	{
+		//cout << "Antes " << vertice << endl;
 		vertice = get_vertice_min_distance(vertice,marcas);	//ESCOGEMOS EL CAMINO MAS CORTO DESDE EL VERTICE ACTUAL
+		//cout << "Luego " << vertice << endl;
 		marcas[vertice] = true;								//LO MARCAMOS COMO VISITADO
-		camino.push_back(get_name_node(vertice));			//LO AGREGAMOS AL CAMINO
+		camino.push_back(get_name_node(vertice));			//LO AGREGAMOS AL CAMIN
+		indices_camino.push_back(vertice);
 	}
+	camino.push_back(get_name_node(vertice_final));
+	indices_camino.push_back(vertice_final);
 
-	cout << "Solucion Inicial: [";
-	for(vector<string>::iterator it = camino.begin(); it!=camino.end();++it)
-		cout << *it << " ";
+	//cout << "Solucion Inicial - string: [";
+	/*for(vector<string>::iterator it = camino.begin(); it!=camino.end();++it)
+		cout << *it <<endl;*/
+	//cout << "]" << endl;
+	cout << "Solucion Inicial: [ "; 
+	//cout << "Solucion Inicial - int: [";
+	for(vector<int>::iterator it = indices_camino.begin(); it!=indices_camino.end();++it)
+			cout << *it << " ";
 	cout << "]" << endl;
 
-	return camino;
+	return indices_camino;
 }
 
-double tsp_tabu_search()
+double get_cost_path(vector<int> s0)
 {
-	//s0 = vecino_mas_cercano(); //SOLUCION INICIAL
+	double acum = 0; //C
+
+	cout.precision(4);//PRECISION A 2 DECIMALES
+	cout.setf(ios::fixed);
+
+	for(vector<int>::iterator it=s0.begin();it!=s0.end();++it){
+		//cout << *it << " " << *it+1 << " " << m[*it][*it+1] << endl;
+		acum+=m[*it][*it+1];
+ 	}
+	return acum;
 }
 
-void move(vector<pair<int,int> > T)
+vector<int> local_search(vector<int> s0)
 {
+	srand (time(NULL));//INICIALIZANDO UNA SEMILLA RANDOM
 
-}
+	vector<pair<int,int> > T; 	//LISTA TABU
+	int tabu_tenure = 10;		//TAMAÑO DE LA LISTA TABU
+	int it = 10;				//ITERACIONES 
+	double optimo_local = get_cost_path(s0);
+	pair<int,int> p;
+	T.clear();
+
+	while(it>0)
+	{
+		p.first = rand() % (dimension-1) + 1;
+		p.second = rand() % (dimension-1) + 1;
+		//cout << "Par: " << p.first << " " << p.second << endl;
+		//cout << "Iteraciones: " << it << endl;
+		//cout << "Resultado: " << !binary_search(T.begin(), T.end(), p) << endl;
+		if(!binary_search(T.begin(), T.end(), p))
+		{
+			//cout << "No esta " << p.first << " " << p.second << endl;
+			if(T.size() >= 10)
+				T.erase(T.begin()+0);
+
+			T.push_back(p);
+			swap(s0[p.first],s0[p.second]);
+			double aux = get_cost_path(s0);
+
+			if(aux < optimo_local)
+			{
+				optimo_local = aux;
+				it = 10;
+			}
+			else{
+				--it;
+			}
+
+		}	
+	}
+
+	cout << "Lista tabu" << endl;
+	for(vector<pair<int,int> >::iterator it = T.begin(); it!=T.end();++it)
+		cout << (*it).first << " " << (*it).second << endl;
+	
+	return s0;
+
+} 
 
 int main()
 {
@@ -195,7 +262,19 @@ int main()
 
 	input_nodes();
 	create_matrix_distance();
-	vector<string> s0 = vecino_mas_cercano();
 
+	vector<int> s0 = vecino_mas_cercano();
+	
+	cout << get_cost_path(s0) << endl;
+
+	vector<int> s_prima = local_search(s0);
+
+	cout << "Solucion prima : [ ";
+	for(vector<int>::iterator it = s_prima.begin(); it!=s_prima.end();++it)
+		cout << *it << " ";
+	cout << "]" << endl;
+	
+	cout << get_cost_path(s_prima) << endl;
+	
 	return 0;
 }
