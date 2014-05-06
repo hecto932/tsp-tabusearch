@@ -1,11 +1,11 @@
 NAME : a280
 COMMENT : drilling problem (Ludwig)
 TYPE : TSP
-DIMENSION: 4
+DIMENSION : 4
 EDGE_WEIGHT_TYPE : EUC_2D
 NODE_COORD_SECTION
-A 5 4 
-B 3 2
-C 7 9
-D 8 6
+  1 5 4 
+  2 3 2 
+  3 7 9
+  4 8 6
 EOF
