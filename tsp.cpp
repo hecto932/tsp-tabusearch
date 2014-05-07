@@ -17,77 +17,119 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <map>
 
 using namespace std;
 
 //CONSTANTES 
-const int _NAME_ 	= 100;
-const int _COMMENT_ = 200;
-const int _TYPE_  	= 10;
-const int _EWT_     = 20;
-const int _N_ 		= 1000;
+const int c_NAME	= 100;
+const int c_COMMENT = 200;
+const int c_TYPE  	= 10;
+const int c_EWT     = 20;
 
-//DEFINICIONES
-typedef pair<float,float> coordenadas; 						//PAR DE DOBLES (double, double)
-typedef vector<pair<long,coordenadas> >::iterator itl; 		//ITERADOR VECTOR DE PAR(, PAR DE DOBLES)
-typedef vector<bool>::iterator itlb;						//ITERADOR DE VECTOR DE MARCAS
+// ------------------------------ DEFINICIONES -----------------------------
+typedef pair<float, float> coordinates;								//DEFINICION DE PAR DE COORDENADAS
+typedef vector<pair<long int ,coordinates> > list_nodes;			//DEFINICION DE LISTA DE NODOS (indice, (x,y))
+typedef vector<pair<long int ,coordinates> >::iterator it_nodes;	//DEFINICION DE ITERADOR PARA LA LISTA DE NODOS
+typedef vector<vector<pair<long int,double> > > list_adjacency;		//DEFINICION DE LA LISTA DE ADYACENCIA
+typedef vector<vector<pair<long int,double> > >::iterator it_ad;	//DEFINICION DE ITERADOR PARA LA LISTA DE ADYACENCIA
+typedef map<coordinates,bool> list_tabu;							//DEFINICION DE LA LISTA TABU
+typedef map<coordinates,bool>::iterator it_tabu;					//DEFINICION DE ITERADOR PARA LISTA TABU
+typedef vector<vector<long int> > list_candidate;					//DEFINICION DE LA LISTA DE CANDIDATOS 
+typedef vector<vector<long int> >::iterator it_candidate;			//DEFINICION DE ITERADOR PARA LISTA DE CANDIDATOS
 
-//VARIABLES GLOBALES
-char name[_NAME_];									//NOMBRE DE LA ENTRADA
-char comment[_COMMENT_];							//COMMENT
-char type[_TYPE_];									//TYPE
-long long int dimension;							//DIMENSION
-char edge_weight_type[_EWT_];						//2D o 3D
+// ------------------------------ VARIABLES GLOBALES -----------------------
+char name[c_NAME];													//NOMBRE DE LA ENTRADA
+char comment[c_COMMENT];											//COMMENT
+char type[c_TYPE];													//TYPE
+long int dimension;													//DIMENSION
+char edge_weight_type[c_EWT];										//2D o 3D
 
-vector<pair<long,coordenadas> > nodes; 	//VECTOR DE NODES
-vector<vector<double> > m; 							//VECTOR DE DISTANCIAS EUCLIDIANAS 2D
-	
-vector<vector<int> > Nx;							//LISTA DE CANDIDATOS
-vector<pair<int,int> > T;							//LISTA TABU 
-int max_iterations;									//MAXIMO NUMERO DE ITERACIONES - DIVERSIFICACION
-vector<long long int> s_asterisco;							//SOLUCION OPTIMA GLOBAL
+list_nodes nodes; 													//LISTA DE NODOS (indice, (x,y))
+list_adjacency list_ad;												//LISTA DE ADYACENCIA
+list_tabu T;														//LISTA TABU
+list_candidate Nx;													//LISTA DE CANDIDATOS
 
+// ---------------------------- FUNCIONES & PROCEDIMIENTOS--------------------------
 
-vector<vector<pair<long,double> > > la;	//LISTA DE ADYACENCIA
-
-
-
-//LECTURA DE LOS NODOS - RAPIDO
+//LECTURA Y CARGA DE LOS NODOS EN LA LISTA DE NODOS
 void input_nodes()
 {
-	coordenadas xy;										//PAR DE COORDENADAS (X,Y)
-	long indice;								//NOMBRE DE LA COORDENADA
-	float x,y;											//AUXILIARES
+	coordinates xy;										//PAR DE COORDENADAS (X,Y)
+	long int index;										//INDICE DE LA COORDENADA
 
 	scanf("NAME : %[^\n]\n", name);						//NAME
 	scanf("COMMENT : %[^\n]\n", comment);				//COMMENT
 	scanf("TYPE : %s\n", type);							//TYPE
-	scanf("DIMENSION : %lld\n", &dimension);			//DIMENSION
+	scanf("DIMENSION : %ld\n", &dimension);			//DIMENSION
 	scanf("EDGE_WEIGHT_TYPE : %s\n", edge_weight_type);	//EDGE_WEIGHT_TYPE
 	scanf("NODE_COORD_SECTION\n");						//NODE_COORD_SECTION
 
-	for(long i= dimension; i > 0; --i)		//PARA CADA NODO
+	for(long int i=dimension; i>0;--i)
 	{
-		scanf("%ld %f %f\n", &indice, &x, &y);		//LEEMOS SUS DATOS
-		xy.first = x;						
-		xy.second = y;
-		nodes.push_back(make_pair(indice,xy));
-	}
+		scanf("%ld %f %f\n", &index, &(xy.first), &(xy.second));
+		nodes.push_back(make_pair(index,xy));
 
+	}
 }
 
-//n^2-n/2
+//IMPRIME POR PANTALLA LA LISTA DE NODOS
+void print_nodes()
+{
+	for(it_nodes it = nodes.begin(); it!=nodes.end(); ++it)
+		cout << (*it).first << " " << (*it).second.first << " " << (*it).second.second << endl;  
+}
 
-//DISTANCIA EUCLIDIANA DE DOS CORDENADAS
-double EUC_DISTANCE_2D(coordenadas c1, coordenadas c2)
+//DISTANCIA EUCLIDIANA DE PUNTOS CORDENADAS
+float euc_2d(coordinates c1, coordinates c2)
 {
 	return sqrt((c2.first-c1.first)*(c2.first-c1.first) + (c2.second-c1.second)*(c2.second-c1.second));
 }
 
+//CARGAMOS LA LISTA DE ADYACENCIA
+void create_list_adjacency()
+{
+	vector<pair<long int,double> > aux;
+	pair<long int,double> p;
+	long int i,j;
+
+	for(it_nodes iti = nodes.begin(); iti!=nodes.end(); ++iti)
+	{
+		i = iti - nodes.begin();
+		aux.clear();
+		for(it_nodes itj = nodes.begin() + i + 1 ; itj != nodes.end(); ++itj)
+		{
+			j = itj - nodes.begin();
+			p.first = j + 1;
+			p.second = euc_2d(nodes[i].second, nodes[j].second);
+			aux.push_back(p);
+		}
+		list_ad.push_back(aux);	
+	}
+}
+
+//IMPRIME POR PANTALLA LA LISTA DE ADYACENCIA
+void print_list_adjacency()
+{
+	long long int i;
+	for(it_ad iti=list_ad.begin(); iti!=list_ad.end(); ++iti)
+	{
+		i = iti-list_ad.begin();
+		cout << "Posicion: " << i+1 << endl;
+		for(vector<pair<long int,double> >::iterator itj=list_ad[i].begin();itj!=list_ad[i].end();++itj)
+		{
+			cout << i+1 << " " << (*itj).first << " " << (*itj).second << endl;
+		}
+	}
+}
+
+//n^2-n/2
+/*
+
 //LLENAMOS LA LISTA DE ADYACENCIA
 void create_lista_adyacencia()
 {
-	vector<pair<long,double> > aux;				//AUXILIAR PARA LLENAR CADA FILA
+	vector<pair<long,double> > aux;							//AUXILIAR PARA LLENAR CADA FILA
 	pair<long long int,double> p_aux;						//PAR AUXILIAR
 	long long int i,j;										//INDICES i,j
 
@@ -320,21 +362,15 @@ vector<long long int> tsp_tabusearch()
 
 	return s_asterisco;
 }
-
+*/
 
 
 int main()
 {
-  	srand (time(NULL));//INICIALIZANDO UNA SEMILLA RANDOM
-
 	input_nodes();
-	//show_nodes();
-	//create_lista_adyacencia();
-	//show_lista_adyacencia();
-	//vector<long long int> s_inicial = vecino_mas_cercano();
-	//cout << get_cost_path(s_inicial) << endl;
-
-	//local_search(s_inicial);
+	print_nodes();
+	create_list_adjacency();
+	print_list_adjacency();
  
 	return 0;
 }
