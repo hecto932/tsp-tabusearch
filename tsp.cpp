@@ -34,8 +34,8 @@ typedef vector<pair<long int ,coordinates> >::iterator it_nodes;	//DEFINICION DE
 typedef vector<vector<pair<long int,double> > > list_adjacency;		//DEFINICION DE LA LISTA DE ADYACENCIA
 typedef vector<vector<pair<long int,double> > >::iterator it_ad;	//DEFINICION DE ITERADOR PARA LA LISTA DE ADYACENCIA
 typedef vector<pair<long int,double> >::iterator ith_la;			//DEFINICION DE ITERADOR PARA LA LISTA DE ADYACENCIA PESO
-typedef vector<pair<long int, long int > > list_tabu;				//DEFINICION DE LA LISTA TABU
-typedef vector<pair<long int, long int > >::iterator it_tabu;		//DEFINICION DE ITERADOR PARA LISTA TABU
+typedef map<pair<long int, long int > ,bool> list_tabu;				//DEFINICION DE LA LISTA TABU
+typedef map<pair<long int, long int > ,bool>::iterator it_tabu;		//DEFINICION DE ITERADOR PARA LISTA TABU
 typedef vector<vector<long int> > list_candidate;					//DEFINICION DE LA LISTA DE CANDIDATOS 
 typedef vector<vector<long int> >::iterator it_candidate;			//DEFINICION DE ITERADOR PARA LISTA DE CANDIDATOS
 typedef vector<long int> path;										//DEFINICION DE UN VECTOR DE NODOS
@@ -52,9 +52,14 @@ list_adjacency list_ad;												//LISTA DE ADYACENCIA
 list_tabu T;														//LISTA TABU
 list_candidate Nx;													//LISTA DE CANDIDATOS
 
-long int tenure;													//TAMAÑO DE LA LISTA DE CANDIDATOS
-long int tabu_tenure;												//TAMAÑO DE LA LISTA TABU
-long int max_it_local;												//CANTIDA DE ITERACIONES MAXIMAS EN LA BUSQUEDA LOCAL
+long int tenure = 100;												//TAMAÑO DE LA LISTA DE CANDIDATOS
+long int tabu_tenure = 10;											//TAMAÑO DE LA LISTA TABU
+long int max_it_local = 10;											//CANTIDAD DE ITERACIONES MAXIMAS EN LA BUSQUEDA LOCAL
+long int max_it_global = 100;										//CANTIDAD DE ITERACIONES MAXIMAS EN LA DIVERSIFICACION
+
+//float cost_optimum;													//OPTIMO GLOBAL 
+//path path_optimum;													//CAMINO GLOBAL
+
 
 // ---------------------------- FUNCIONES & PROCEDIMIENTOS--------------------------
 
@@ -132,7 +137,7 @@ void print_list_adjacency()
 //CREA UNA SOLUCION ALEATORIA PARTIENDO DE UN VERTICE ALEATORIO
 path initial_solution()
 {
-	srand (time(NULL));														//INICIALIZANDO UNA SEMILLA RANDOM
+
 	vector<bool> marks(dimension,false); 									//VECTOR DE MARCAS
 	path s_initial;															//path EN INIDICES
 	long int vertice = rand() % dimension;									//ESCOGEMOS UN VERTICE DE INICIO
@@ -189,20 +194,11 @@ float get_path_cost(path p)
 }
 
 //INICALIZAMOS LA INFORMACION PARA INTENSIFICACION Y DIVERSIFICACION
-void initilizeHistoricalInformation(long int i_tenure, long int i_tabu_tenure, long int i_max_it_local)
-{
-	T.clear();											//INICIALIZAMOS LA LISTA TABU
-	Nx.clear();											//INICIALIZAMOS LA LISTA DE CANDIDATOS
-	tenure = i_tenure;									//TAMAÑO DE LA LISTA DE CANDIDATOS
-	tabu_tenure = i_tabu_tenure;						//TAMAÑO DE LA LISTA TABU
-	max_it_local = i_max_it_local;						//CANTIDAD DE ITERACIONES MAXIMAS LOCALES
-}
 
 
 //OBTIENE UN PAR DE INDICES (I,J) QUE NO SEAN IGUALES DE MANERA ALEATORIA
 pair<long int,long int> get_pair_int()
 {
-	srand (time(NULL));									//INICIALIZANDO UNA SEMILLA RANDOM
 	pair<long int, long int> pair(0,0);					//CREAMOS UN PAR (0,0)						
 
 	while(pair.first==pair.second)						//MIENTRAS (i,j) SEAN IGUALES
@@ -214,41 +210,46 @@ pair<long int,long int> get_pair_int()
 	return pair;										//REGRESO EL PAR
 }
 
+
 //IMPRIME LA LISTA TABU
 void print_list_tabu()
 {
 	cout << "Lista tabu: " << endl;
 	for(it_tabu it = T.begin(); it!=T.end(); ++it)
-		cout << (*it).first << " " << (*it).second << endl;
+		cout << (*it).first.first << " " << (*it).first.second << endl;
 	cout << "end lista tabu" << endl;
+}
+
+void initilizeHistoricalInformation()
+{
+	T.clear();											//INICIALIZAMOS LA LISTA TABU
+	Nx.clear();											//INICIALIZAMOS LA LISTA DE CANDIDATOS										
 }
 
 //REALIZA EL PROCESO DE INTENSIFICACION, ES DECIR, LA BUSQUEDA LOCAL DENTRO DE UNA SOLUCION
 path local_search(path s_initial)
 {
-	srand (time(NULL));															//INICIALIZANDO UNA SEMILLA RANDOM
+	T.clear();
 	pair<long int, long int> pair_aux;											//PAR DE INDICES (i,j)
+	pair<long int, long int> pair_aux2;											//PAR DE INDICES (i,j)
 	float aux;																	//COSTO AUXILIAR
 	long int cont_iter = 1;														//INCIALIZAMOS CONTADOR DE ITERACIONES
 	float local_max = get_path_cost(s_initial);									//MAXIMO LOCAL INICIAL
 	path s_prima = s_initial;													//CAMINO A RETORNAR, INICIALIZADO CON EL QUE SE RECIBE
-	bool esta;
 
-	cout << tabu_tenure << endl; 
 	while(cont_iter <= max_it_local)											//MIENTRAS HAYA ITERACIONES 
 	{
-		cout << "Iteraciones: " << cont_iter << endl;
 		pair_aux = get_pair_int();												//CALCULAMOS UN PAR
-		esta = (find(T.begin(), T.end(), pair_aux)!=T.end());
-		cout << esta << endl;
-		if(!esta)																//VERIFICAMO QUE NO EXISTA EN LA LISTA TABU
+		pair_aux2 = pair_aux;
+		swap(pair_aux2.first, pair_aux2.second);			
+		if(T.find(pair_aux)==T.find(pair_aux2))									//VERIFICAMO QUE NO EXISTA EN LA LISTA TABU
 		{
-			cout << "entro " << T.size() << endl;
+			//cout << "entro" << endl;
 			if(T.size() >= tabu_tenure)											//SI EL TAMAÑO DE LA LISTA TABU >= tabu_tenure
-				T.erase(T.begin()+0);											//BORRO EL PRIMER ELEMENTO DE LA LISTA
-			T.push_back(pair_aux);												//AGREGO EL NUEVO ELEMENTO
+				T.erase(T.begin());												//BORRO EL PRIMER ELEMENTO DE LA LISTA
+			T[pair_aux]=true;													//AGREGO EL NUEVO ELEMENTO
 			swap(s_initial[pair_aux.first],s_initial[pair_aux.second]);			//INTERCAMBIO LOS ELEMENTOS CONS LOS INDICES DE LOS PARES CREADOS
-			float aux = get_path_cost(s_initial);								//CALCULO EL COSTO DEL NUEVO CAMINO
+			aux = get_path_cost(s_initial);										//CALCULO EL COSTO DEL NUEVO CAMINO
 			if(aux < local_max)													//SI EL NUEVO CAMINO ES MAS BARATO QUE EL QUE TENIA 
 			{
 				local_max = aux;												//OBTENGO EL NUEVO OPTIMO LOCAL
@@ -260,171 +261,78 @@ path local_search(path s_initial)
 		cont_iter++;															//SUMO UNA ITERACION
 	}
 
-	print_list_tabu();
 	return s_prima;																//RETORNO EL MEJOR CAMINO ENCONTRADO
 }
 
+void update_solution(path& s, path s_initial, path s_prima, long int& cont_global)
+{
+	float aux1 = get_path_cost(s_initial);
+	float aux2 = get_path_cost(s_prima);
+	float aux3 = get_path_cost(s);
+
+	if(aux2 < aux1 && aux2 < aux3){
+		s = s_prima;
+		cont_global = 1;
+		cout << "1" << endl;
+	}
+	else if(aux1 < aux2 && aux1 < aux3){
+		s = s_initial;
+		cont_global = 1;
+		cout << "2" << endl;
+	}
+	else
+	{
+		cout << "3" << endl;
+		cont_global++;
+	}
+}
+
+//ACTUALIZAMOS LA INFORMACION HISTORICA
+void updateHistoricalInformation(path s_initial)
+{
+	if(Nx.size()>=tenure)
+		Nx.erase(Nx.begin()+0);
+	Nx.push_back(s_initial);
+
+}
+
 //PROCEDIMIENTO TABU
-void tsp_tabusearch(long int max_iterations, long int tenure, long int tabu_tenure, long int max_it_local)
+path tsp_tabusearch()
 {
-	long int cont_global = 1;
-	long int cont_iter = 1;
-	path s_initial = initial_solution();
-	initilizeHistoricalInformation(tenure,tabu_tenure,max_it_local);
-	while( (cont_global <= tenure) && (cont_iter <= max_iterations) )
+	path s;
+	s.clear();
+	path s_initial;
+	path s_prima;
+	long int cont_global;
+	long int cont_iter; 
+
+	s_initial = initial_solution();
+	s = s_initial;
+	print_path(s_initial);
+	cout << get_path_cost(s_initial);
+	initilizeHistoricalInformation();
+	cont_global = 1; cont_iter = 1;
+	while( (cont_global <= tenure) && (cont_iter <= max_it_global) )
 	{
-		cont_iter++;
+		s_prima = local_search(s_initial);									//INTENSIFICACION
+		update_solution(s, s_initial, s_prima, cont_global);				//ACTUALIZO LA MEJOR SOLUCION
+		updateHistoricalInformation(s_initial);								//ACTUALIZO LA LISTA DE CANDIDATOS
+		s_initial = initial_solution();										//NUEVA SOLUCION INICIAL
+		cont_iter++;														//UNA ITERACION MAS
 	}
 
+	return s;
 }
-
-//n^2-n/2
-/*
-
-//VERIFICA SI LAS CIUDADES FUERON VISITADAS
-bool all_cities_visited(vector<bool> marcas)
-{
-	bool visited = true;
-	for (vector<bool>::iterator itl = marcas.begin() ; itl!=marcas.end() && visited; ++itl)
-		if(!(*itl))
-			visited = false;
-	return visited;
-}
-
-vector<long long int> vecino_mas_cercano()
-{	
-	srand (time(NULL));									//INICIALIZANDO UNA SEMILLA RANDOM
-
-	vector<bool> marcas(dimension,false); 				//VECTOR DE MARCAS
-	vector<long long int> indices_path;				//CAMINO EN INIDICES
-	indices_camino.clear();								//LIMPIO EL VECTOR
-	long long int vertice_bool;
-	long long int vertice = rand() % dimension;			//ESCOGEMOS UN VERTICE DE INICIO
-	long long int vertice_final = vertice;				//A DONDE DEBO REGRESAR
-	marcas[vertice] = true;								//LO MARCAMOS COMO VISITADOS
-	indices_camino.push_back(vertice);
-
-	while(!all_cities_visited(marcas))					//SI TODAS LAS CIUDADES NO HAN SIDO VISITADAS
-	{
-		//vertice = get_vertice_min_distance(vertice,marcas);	//ESCOGEMOS EL CAMINO MAS CORTO DESDE EL VERTICE ACTUAL
-		vertice = find(marcas.begin(), marcas.end(), false) - marcas.begin();
-		marcas[vertice] = true;								//LO MARCAMOS COMO VISITADO
-		indices_camino.push_back(vertice);
-	}
-
-	indices_camino.push_back(vertice_final);
-
-	cout << "Solucion Inicial: [ "; 
-	for(vector<long long int>::iterator it = indices_camino.begin(); it!=indices_camino.end();++it)
-			cout << *it << " ";
-	cout << "]" << endl;
-
-	return indices_camino;
-}
-
-//VERIFICAMOS TODA LA VENCIDAD 
-vector<long long int> local_search(vector<long long int> s0)
-{
-	srand (time(NULL));//INICIALIZANDO UNA SEMILLA RANDOM
-
-	vector<pair<int,int> > T; 	//LISTA TABU
-	int tabu_tenure = 10;		//TAMAÑO DE LA LISTA TABU
-	int it = 1000;				//ITERACIONES 
-	double optimo_local = get_cost_path(s0);
-	pair<int,int> p;
-	T.clear();
-
-	while(it>0)
-	{
-		p = get_pair_int();
-
-		bool esta = find(T.begin(), T.end(), p)!=T.end();
-		if(!esta)
-		{
-			cout << T.size() << endl;
-			if(T.size() >= 10)
-				T.erase(T.begin()+0);
-
-			T.push_back(p);
-			swap(s0[p.first],s0[p.second]);
-			double aux = get_cost_path(s0);
-
-			if(aux < optimo_local)
-			{
-				optimo_local = aux;
-				it = 100;
-				cout << "OTRA VEZ EN 100" << endl;
-			}
-
-		}
-
-		--it;
-	}
-
-	cout << "Lista tabu" << endl;
-	for(vector<pair<int,int> >::iterator it = T.begin(); it!=T.end();++it)
-		cout << (*it).first << " " << (*it).second << endl;
-	
-	cout << "Mejor tiempo: " << optimo_local << endl;
-	return s0;
-
-} 
-
-
-void InicializarInformacionHistorica()
-{
-	Nx.clear();
-	T.clear();
-	max_iterations = 1000;	//MAXIMO NUMERO DE ITERACIONES EN LA DIVERSIFICACION
-}
-
-bool criterio_parada()
-{
-	return (max_iterations>0);
-}
-
-void actualizarSolucion(vector<long long int> solucion_prima)
-{
-	if(get_cost_path(solucion_prima) < get_cost_path(s_asterisco))
-		s_asterisco = solucion_prima;
-}
-
-
-vector<long long int> tsp_tabusearch()
-{
-	vector<long long int> solucion_incial; //CONTIENE LA SOLUCION INICIAL
-	vector<long long int> solucion_prima;	//CONTIENE LA SOLUCION PRIMA
-	double initial_cost;		//COSTO INICIAL
-	
-	solucion_incial = vecino_mas_cercano();	//OBTENEMOS LA SOLUCION INICIAL
-	s_asterisco = solucion_incial;
-	initial_cost = get_cost_path(s_asterisco);
-
-	InicializarInformacionHistorica();
-	do
-	{
-		solucion_prima = local_search(solucion_incial);
-		actualizarSolucion(solucion_prima);
-
-
-	}while(criterio_parada());
-
-	return s_asterisco;
-}
-*/
-
 
 int main()
 {
+	srand (time(NULL));
+
 	input_nodes();
 	create_list_adjacency();
-	path s_initial = initial_solution();
-	print_path(s_initial);
-	cout << "Costo total:" << get_path_cost(s_initial) << endl;
-	initilizeHistoricalInformation(100,10,10);
-	path s_prima = local_search(s_initial);
-	print_path(s_prima);
- 	cout << "Costo total:" << get_path_cost(s_prima) << endl;
+	path path_optimum = tsp_tabusearch();
+	print_path(path_optimum);
+	cout << "COSTO TOTAL: " << get_path_cost(path_optimum) << endl;
 
 	return 0;
 }
