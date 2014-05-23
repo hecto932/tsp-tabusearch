@@ -22,10 +22,10 @@
 using namespace std;
 
 //CONSTANTES 
-const int c_NAME	= 100;
-const int c_COMMENT = 200;
-const int c_TYPE  	= 10;
-const int c_EWT     = 20;
+const int c_NAME	= 100;											//TAMAÑO DEL NOMBRE
+const int c_COMMENT = 200;											//TAMAÑO DEL COMENTARIO
+const int c_TYPE  	= 10;											//TAMAÑO DEL TIPO
+const int c_EWT     = 20;											//TAMAÑO DEL EDGE
 
 // ------------------------------ DEFINICIONES -----------------------------
 typedef pair<float, float> coordinates;								//DEFINICION DE PAR DE COORDENADAS
@@ -40,6 +40,7 @@ typedef vector<vector<long int> > list_candidate;					//DEFINICION DE LA LISTA D
 typedef vector<vector<long int> >::iterator it_candidate;			//DEFINICION DE ITERADOR PARA LISTA DE CANDIDATOS
 typedef vector<long int> path;										//DEFINICION DE UN VECTOR DE NODOS
 typedef vector<long int>::iterator it_path;							//DEFINICION DE ITERADOR PARA UN path
+
 // ------------------------------ VARIABLES GLOBALES -----------------------
 char name[c_NAME];													//NOMBRE DE LA ENTRADA
 char comment[c_COMMENT];											//COMMENT
@@ -52,14 +53,10 @@ list_adjacency list_ad;												//LISTA DE ADYACENCIA
 list_tabu T;														//LISTA TABU
 list_candidate Nx;													//LISTA DE CANDIDATOS
 
-long int tenure = 100;												//TAMAÑO DE LA LISTA DE CANDIDATOS
-long int tabu_tenure = 10;											//TAMAÑO DE LA LISTA TABU
-long int max_it_local = 10;											//CANTIDAD DE ITERACIONES MAXIMAS EN LA BUSQUEDA LOCAL
-long int max_it_global = 100;										//CANTIDAD DE ITERACIONES MAXIMAS EN LA DIVERSIFICACION
-
-//float cost_optimum;													//OPTIMO GLOBAL 
-//path path_optimum;													//CAMINO GLOBAL
-
+long int tenure 		= 20;										//TAMAÑO DE LA LISTA DE CANDIDATOS
+long int tabu_tenure 	= 10;										//TAMAÑO DE LA LISTA TABU
+long int max_it_local 	= 100;										//CANTIDAD DE ITERACIONES MAXIMAS EN LA BUSQUEDA LOCAL
+long int max_it_global 	= 1000;										//CANTIDAD DE ITERACIONES MAXIMAS EN LA DIVERSIFICACION
 
 // ---------------------------- FUNCIONES & PROCEDIMIENTOS--------------------------
 
@@ -78,8 +75,8 @@ void input_nodes()
 
 	for(long int i=dimension; i>0;--i)								//AGREGAMOS LOS NODOS A LISTA DE NODOS
 	{
-		scanf("%ld %f %f\n", &index, &(xy.first), &(xy.second));
-		nodes.push_back(make_pair(index,xy));
+		scanf("%ld %f %f\n", &index, &(xy.first), &(xy.second));	//LEEMOS INDICE X Y 
+		nodes.push_back(make_pair(index,xy));						//AGREGAMOS EL NODO A LA LISTA
 
 	}
 }
@@ -87,14 +84,14 @@ void input_nodes()
 //IMPRIME POR PANTALLA LA LISTA DE NODOS
 void print_nodes()
 {
-	for(it_nodes it = nodes.begin(); it!=nodes.end(); ++it)
+	for(it_nodes it = nodes.begin(); it!=nodes.end(); ++it)										
 		cout << (*it).first << " " << (*it).second.first << " " << (*it).second.second << endl;  
 }
 
 //DISTANCIA EUCLIDIANA DE PUNTOS CORDENADAS
 float euc_2d(coordinates c1, coordinates c2)
 {
-	return sqrt((c2.first-c1.first)*(c2.first-c1.first) + (c2.second-c1.second)*(c2.second-c1.second));
+	return sqrt((c2.first-c1.first)*(c2.first-c1.first) + (c2.second-c1.second)*(c2.second-c1.second));	//RETORNAMOS LA DISTANCIA ENTRE DOS PUNTOS
 }
 
 //CARGAMOS LA LISTA DE ADYACENCIA
@@ -106,16 +103,16 @@ void create_list_adjacency()
 
 	for(it_nodes iti = nodes.begin(); iti!=nodes.end()-1; ++iti)				//PARA CADA INDICE HASTA dimension - 1
 	{
-		i = iti - nodes.begin();
-		aux.clear();
-		for(it_nodes itj = nodes.begin() + i + 1 ; itj != nodes.end(); ++itj)
+		i = iti - nodes.begin();												//CALCULAMOS EL VERTICE i
+		aux.clear();															//LIMPIAMOS EL VECTOR AUXILIAR
+		for(it_nodes itj = nodes.begin() + i + 1 ; itj != nodes.end(); ++itj)	//PARA CADA POSICION DEL VECTOR i+1
 		{
 			j = itj - nodes.begin();
-			p.first = j + 1;
-			p.second = euc_2d(nodes[i].second, nodes[j].second);
-			aux.push_back(p);
+			p.first = j + 1;													
+			p.second = euc_2d(nodes[i].second, nodes[j].second);				//CALCULAMOS LA DISTNACIA
+			aux.push_back(p);													//LA GUARDAMOS
 		}
-		list_ad.push_back(aux);	
+		list_ad.push_back(aux);													//AGREGAMOS EL VECTOR AL VECTOR EN LA POSICION i
 	}
 }
 
@@ -134,29 +131,80 @@ void print_list_adjacency()
 	}
 }
 
+//OBTENGO EL COSTO TOTAL DE UN CAMINO
+float get_path_cost(path p)
+{
+	float cost = 0;										//COSTO INCIAL EN 0
+	long int i,j;										//INDICES I,J A CALCULAR EL CAMINO ENTRE ELLOS
+	for(it_path itp = p.begin(); itp!=p.end()-1;++itp)	//PARA CADA PARA [i,j) DEL CAMINO
+	{
+		i = *itp;										//OBTENGO EL INDICE i
+		j = *(itp+1);									//OBTENGO EL INDICE j
+		if(i > j) swap(i,j);							//SI i > j ENTONCES SWAP
+		//cost+=get_cost(i,j);							//OBTENGO EL COSTO DE IR DEL NODO i AL NODO j
+		//cout << i << " " << j << " " << euc_2d(nodes[i].second,nodes[j].second) << endl;
+		cost+=euc_2d(nodes[i].second,nodes[j].second);	//OBTENGO EL COSTO DE IR DEL NODO i AL NODO j
+	}
+
+	/*
+	float cost = 0;
+	long int i,j,k;
+	for(long int i=0;i<p.size()-1;++i)
+	{
+		j = p[i];
+		k = p[i+1];
+		if(j > k) swap(j,k);							//SI i > j ENTONCES SWAP
+		cost+=euc_2d(nodes[j].second,nodes[k].second);	//OBTENGO EL COSTO DE IR DEL NODO i AL NODO j
+	}
+	*/
+	return cost;										//RETORNO EL COSTO
+}
+
 //CREA UNA SOLUCION ALEATORIA PARTIENDO DE UN VERTICE ALEATORIO
 path initial_solution()
 {
-
+	
 	vector<bool> marks(dimension,false); 									//VECTOR DE MARCAS
 	path s_initial;															//path EN INIDICES
+	s_initial.clear();
 	long int vertice = rand() % dimension;									//ESCOGEMOS UN VERTICE DE INICIO
 	long int vertice_final = vertice;										//A DONDE DEBO REGRESAR
 	marks[vertice] = true;													//LO MARCAMOS COMO VISITADOS
 	s_initial.push_back(vertice);
 
+	
 	while(find(marks.begin(), marks.end(), false)!=marks.end())
 	{
 		vertice = find(marks.begin(), marks.end(), false) - marks.begin();
 		marks[vertice] = true;				
 		s_initial.push_back(vertice);
 	}
+	
 
+	/*
+	path s_initial;
+	vector<bool> marks(dimension,false);
+	long int vertice = rand() % dimension;
+	long int vertice_final = vertice;
+	marks[vertice] = true;
+	s_initial.push_back(vertice);
+
+	while(find(marks.begin(), marks.end(), false)!=marks.end())
+	{
+		vertice = rand() % dimension;
+		if(!marks[vertice])
+		{
+			marks[vertice] = true;				
+			s_initial.push_back(vertice);
+		}	
+	}
+	*/
 	s_initial.push_back(vertice_final);
-
+	
 	return s_initial;
 }
 
+//IMPRIME UN CAMINO
 void print_path(path p)
 {
 	cout << "[";
@@ -177,21 +225,6 @@ float get_cost(long int i, long int j)
 	return cost;																//DEVUELVO EL COSTO
 }
 
-//OBTENGO EL COSTO TOTAL DE UN CAMINO
-float get_path_cost(path p)
-{
-	float cost = 0;										//COSTO INCIAL EN 0
-	long int i,j;										//INDICES I,J A CALCULAR EL CAMINO ENTRE ELLOS
-	for(it_path itp = p.begin(); itp!=p.end()-1;++itp)	//PARA CADA PARA [i,j) DEL CAMINO
-	{
-		i = *itp;										//OBTENGO EL INDICE i
-		j = *(itp+1);									//OBTENGO EL INDICE j
-		if(i > j) swap(i,j);							//SI i > j ENTONCES SWAP
-		cost+=get_cost(i,j);							//OBTENGO EL COSTO DE IR DEL NODO i AL NODO j
-	}
-
-	return cost;										//RETORNO EL COSTO
-}
 
 //INICALIZAMOS LA INFORMACION PARA INTENSIFICACION Y DIVERSIFICACION
 
@@ -199,15 +232,15 @@ float get_path_cost(path p)
 //OBTIENE UN PAR DE INDICES (I,J) QUE NO SEAN IGUALES DE MANERA ALEATORIA
 pair<long int,long int> get_pair_int()
 {
-	pair<long int, long int> pair(0,0);					//CREAMOS UN PAR (0,0)						
+	pair<long int, long int> a((rand() % (dimension-1)) + 1,(rand() % (dimension-1)) + 1);	//CREAMOS UN PAR ALEATORIO					
 
-	while(pair.first==pair.second)						//MIENTRAS (i,j) SEAN IGUALES
-	{													//CALCULO UNOS NUEVOS
-		pair.first = (rand() % (dimension-1)) + 1;	
-		pair.second = (rand() % (dimension-1)) + 1;
+	while(a.first==a.second)																//MIENTRAS (i,j) SEAN IGUALES
+	{																						//CALCULO UNOS NUEVOS
+		a.first = (rand() % (dimension-1)) + 1;	
+		a.second = (rand() % (dimension-1)) + 1;
 	}
 
-	return pair;										//REGRESO EL PAR
+	return a;																				//RETORNO EL PAR
 }
 
 
@@ -216,22 +249,23 @@ void print_list_tabu()
 {
 	cout << "Lista tabu: " << endl;
 	for(it_tabu it = T.begin(); it!=T.end(); ++it)
-		cout << (*it).first.first << " " << (*it).first.second << endl;
+		cout << (*it).first.first << " " << (*it).first.second << " " << (*it).second << endl;
 	cout << "end lista tabu" << endl;
 }
 
+//INICIALIZAMOS LA INFORMACION HISTORICA
 void initilizeHistoricalInformation()
 {
-	T.clear();											//INICIALIZAMOS LA LISTA TABU
-	Nx.clear();											//INICIALIZAMOS LA LISTA DE CANDIDATOS										
+	T.clear();		//INICIALIZAMOS LA LISTA TABU
+	Nx.clear();		//INICIALIZAMOS LA LISTA DE CANDIDATOS										
 }
 
 //REALIZA EL PROCESO DE INTENSIFICACION, ES DECIR, LA BUSQUEDA LOCAL DENTRO DE UNA SOLUCION
 path local_search(path s_initial)
 {
-	T.clear();
-	pair<long int, long int> pair_aux;											//PAR DE INDICES (i,j)
-	pair<long int, long int> pair_aux2;											//PAR DE INDICES (i,j)
+	T.clear();																	//LIMPIAMOS LA LISTA TABU
+	pair<long int, long int> a;													//PAR DE INDICES (i,j)
+	pair<long int, long int> b;													//PAR DE INDICES (i,j)
 	float aux;																	//COSTO AUXILIAR
 	long int cont_iter = 1;														//INCIALIZAMOS CONTADOR DE ITERACIONES
 	float local_max = get_path_cost(s_initial);									//MAXIMO LOCAL INICIAL
@@ -239,16 +273,15 @@ path local_search(path s_initial)
 
 	while(cont_iter <= max_it_local)											//MIENTRAS HAYA ITERACIONES 
 	{
-		pair_aux = get_pair_int();												//CALCULAMOS UN PAR
-		pair_aux2 = pair_aux;
-		swap(pair_aux2.first, pair_aux2.second);			
-		if(T.find(pair_aux)==T.find(pair_aux2))									//VERIFICAMO QUE NO EXISTA EN LA LISTA TABU
+		a = get_pair_int();														//CALCULAMOS UN PAR
+		b.first = a.second;
+		b.second = a.first;		
+		if(T.find(a)==T.find(b))												//VERIFICAMO QUE NO EXISTA EN LA LISTA TABU
 		{
-			//cout << "entro" << endl;
 			if(T.size() >= tabu_tenure)											//SI EL TAMAÑO DE LA LISTA TABU >= tabu_tenure
 				T.erase(T.begin());												//BORRO EL PRIMER ELEMENTO DE LA LISTA
-			T[pair_aux]=true;													//AGREGO EL NUEVO ELEMENTO
-			swap(s_initial[pair_aux.first],s_initial[pair_aux.second]);			//INTERCAMBIO LOS ELEMENTOS CONS LOS INDICES DE LOS PARES CREADOS
+			T[a]=true;															//AGREGO EL NUEVO ELEMENTO
+			swap(s_initial[a.first],s_initial[a.second]);						//INTERCAMBIO LOS ELEMENTOS CONS LOS INDICES DE LOS PARES CREADOS
 			aux = get_path_cost(s_initial);										//CALCULO EL COSTO DEL NUEVO CAMINO
 			if(aux < local_max)													//SI EL NUEVO CAMINO ES MAS BARATO QUE EL QUE TENIA 
 			{
@@ -260,7 +293,7 @@ path local_search(path s_initial)
 		}
 		cont_iter++;															//SUMO UNA ITERACION
 	}
-
+	//print_list_tabu();
 	return s_prima;																//RETORNO EL MEJOR CAMINO ENCONTRADO
 }
 
@@ -290,10 +323,19 @@ void update_solution(path& s, path s_initial, path s_prima, long int& cont_globa
 //ACTUALIZAMOS LA INFORMACION HISTORICA
 void updateHistoricalInformation(path s_initial)
 {
-	if(Nx.size()>=tenure)
-		Nx.erase(Nx.begin()+0);
-	Nx.push_back(s_initial);
+	if(Nx.size()>=tenure)			//SI LA LISTA DE CANDIDATOS ESTA LLENA
+		Nx.erase(Nx.begin()+0);		//ELIMINAMOS LA PRIMERA POSICION
+	Nx.push_back(s_initial);		//AGREGAMOS LA SOLUCION USADA
 
+}
+
+//BUSCAMOS UNA NUEVA SOLUCION INICIAL QUE NO HAYA SIDO TOMADA
+path findNewSolution()
+{
+	path new_solution = initial_solution();						//CALCULAMOS UNA SOLUCION ALEATORIA
+	while(find(Nx.begin(), Nx.end(), new_solution)!=Nx.end())	//VERIFICAMOS SI NO LA HEMOS TOMADO
+		new_solution = initial_solution();						//SI LA TOMAMOS CALCULAMOS OTRA
+	return new_solution;										//RETORNAMOS UNA NUEVA SOLUCION INICIAL
 }
 
 //PROCEDIMIENTO TABU
@@ -317,7 +359,7 @@ path tsp_tabusearch()
 		s_prima = local_search(s_initial);									//INTENSIFICACION
 		update_solution(s, s_initial, s_prima, cont_global);				//ACTUALIZO LA MEJOR SOLUCION
 		updateHistoricalInformation(s_initial);								//ACTUALIZO LA LISTA DE CANDIDATOS
-		s_initial = initial_solution();										//NUEVA SOLUCION INICIAL
+		s_initial = findNewSolution();										//NUEVA SOLUCION INICIAL
 		cont_iter++;														//UNA ITERACION MAS
 	}
 
@@ -326,13 +368,33 @@ path tsp_tabusearch()
 
 int main()
 {
-	srand (time(NULL));
 
-	input_nodes();
-	create_list_adjacency();
-	path path_optimum = tsp_tabusearch();
-	print_path(path_optimum);
-	cout << "COSTO TOTAL: " << get_path_cost(path_optimum) << endl;
+	
+	srand (time(NULL));											//INICIALIZAMOS LA SEMILLA
+	clock_t t_begin;											//TIEMPO DE INICIO
+	clock_t t_end;												//TIEMPO FINAL
+	double secs;							
 
+	input_nodes();												//LEEMOS LOS NODOS
+	create_list_adjacency();									//CREAMOS LA LISTA DE ADYACENCIA
+	t_begin = clock();											//TOMAMOS EL TIEMPO DE INICIO DE LA FUNCION TABU
+	path path_optimum = tsp_tabusearch();						//INICIAMOS LA FUNCION TABU
+	print_path(path_optimum);									//MOSTRAMOS EL CAMINO
+	cout << "COSTO: " << get_path_cost(path_optimum) << endl;	//IMPRIMOS EL COSTO
+	t_end = clock();											//TOMAMOS EL TIEMPO FINAL DEL PROBLEMA
+	secs = (double)(t_end - t_begin)/CLOCKS_PER_SEC;			//OBTENEMOS LA DIFERENCIA ENTRE EL TIEMPO FINAL Y DE INICIO
+	cout << "TIEMPO: " << secs << " segundos." <<endl;			//IMPRIMOS LA CANTIDAD DE SEGUNDOS
+	
+
+	
+	//srand (time(NULL));											//INICIALIZAMOS LA SEMILLA
+	//input_nodes();											//LEEMOS LOS NODOS
+	//create_list_adjacency();									//CREAMOS LA LISTA DE ADYACENCIA
+	//print_list_adjacency();
+	//path s_initial = initial_solution();
+	//print_path(camino);
+	//cout << "Costo: " << get_path_cost(camino) << endl;
+	//print_list_adjacency();
+	
 	return 0;
 }
