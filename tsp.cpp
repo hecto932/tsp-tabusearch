@@ -1,7 +1,7 @@
 /*
 	Problema: Agente viajero
 	Metaheuristica: Tabu search
-	
+
 	Integrantes:
 	Acosta, Ricardo C.I 20.082.974
 	Flores, Hector 	C.I 20.162.504
@@ -19,7 +19,7 @@
 
 using namespace std;
 
-//CONSTANTES 
+//CONSTANTES
 const int c_NAME	= 100;											//TAMAÑO DEL NOMBRE
 const int c_COMMENT = 200;											//TAMAÑO DEL COMENTARIO
 const int c_TYPE  	= 10;											//TAMAÑO DEL TIPO
@@ -34,7 +34,7 @@ typedef vector<vector<pair<long int,long int> > >::iterator it_ad;	//DEFINICION 
 typedef vector<pair<long int,long int> >::iterator ith_la;			//DEFINICION DE ITERADOR PARA LA LISTA DE ADYACENCIA PESO
 typedef vector<pair<long int, long int > > list_tabu;				//DEFINICION DE LA LISTA TABU
 typedef vector<pair<long int, long int > >::iterator it_tabu;		//DEFINICION DE ITERADOR PARA LISTA TABU
-typedef vector<vector<long int> > list_candidate;					//DEFINICION DE LA LISTA DE CANDIDATOS 
+typedef vector<vector<long int> > list_candidate;					//DEFINICION DE LA LISTA DE CANDIDATOS
 typedef vector<vector<long int> >::iterator it_candidate;			//DEFINICION DE ITERADOR PARA LISTA DE CANDIDATOS
 typedef vector<long int> path;										//DEFINICION DE UN VECTOR DE NODOS
 typedef vector<long int>::iterator it_path;							//DEFINICION DE ITERADOR PARA UN path
@@ -73,7 +73,7 @@ void input_nodes()
 
 	for(long int i=dimension; i>0;--i)								//AGREGAMOS LOS NODOS A LISTA DE NODOS
 	{
-		scanf("%ld %f %f\n", &index, &(xy.first), &(xy.second));	//LEEMOS INDICE X Y 
+		scanf("%ld %f %f\n", &index, &(xy.first), &(xy.second));	//LEEMOS INDICE X Y
 		nodes.push_back(make_pair(index,xy));						//AGREGAMOS EL NODO A LA LISTA
 	}
 }
@@ -81,8 +81,8 @@ void input_nodes()
 //IMPRIME POR PANTALLA LA LISTA DE NODOS
 void print_nodes()
 {
-	for(it_nodes it = nodes.begin(); it!=nodes.end(); ++it)										
-		cout << (*it).first << " " << (*it).second.first << " " << (*it).second.second << endl;  
+	for(it_nodes it = nodes.begin(); it!=nodes.end(); ++it)
+		cout << (*it).first << " " << (*it).second.first << " " << (*it).second.second << endl;
 }
 
 //DISTANCIA EUCLIDIANA DE PUNTOS CORDENADAS
@@ -107,7 +107,7 @@ void create_list_adjacency()
 		for(it_nodes itj = nodes.begin() + i + 1 ; itj != nodes.end(); ++itj)	//PARA CADA POSICION DEL VECTOR i+1
 		{
 			j = itj - nodes.begin();
-			p.first = j + 1;													
+			p.first = j + 1;
 			p.second = euc_2d(nodes[i].second, nodes[j].second);				//CALCULAMOS LA DISTNACIA
 			aux.push_back(p);													//LA GUARDAMOS
 		}
@@ -131,7 +131,7 @@ void print_list_adjacency()
 }
 
 //OBTENGO EL COSTO DE IR A UNA CIUDAD A OTRA
-long int get_cost(long int i, long int j)											
+long int get_cost(long int i, long int j)
 {
 	long int cost = 0;															//COSTO EN 0
 	for(ith_la it = list_ad[i].begin(); it!=list_ad[i].end() && cost==0; ++it)	//RECORRO LA LISTA DEL INDICE i DE LA LISTA DE ADYACENCIA
@@ -154,7 +154,7 @@ long int get_path_cost(path p)
 		//cost+=get_cost(i,j);							//OBTENGO EL COSTO DE IR DEL NODO i AL NODO j
 		cost+=euc_2d(nodes[i].second,nodes[j].second);	//OBTENGO EL COSTO DE IR DEL NODO i AL NODO j
 	}
-	
+
 	return cost;										//RETORNO EL COSTO
 }
 
@@ -168,16 +168,16 @@ path initial_solution()
 	marks[vertice] = true;													//LO MARCAMOS COMO VISITADOS
 	s_initial.push_back(vertice);											//AGREGAMOS EL VERTICE AL CAMINO
 
-	
+
 	while(find(marks.begin(), marks.end(), false)!=marks.end())				//MIENTRAS HAYAN VERTICES NO VISITADOS
 	{
 		vertice = find(marks.begin(), marks.end(), false) - marks.begin();	//ESCOJO UN VERTICE NO VISITADO
 		marks[vertice] = true;												//LO MARCAMOS COMO VISTADO
 		s_initial.push_back(vertice);										//LO AGREGAMOS AL VECTOR DE INDICES
 	}
-	
+
 	s_initial.push_back(vertice_final);										//AGREGAMOS AL FINAL EL VERTICE DE INICIO
-	
+
 	return s_initial;														//RETORNAMOS EL CAMINO ALEATORIO
 }
 
@@ -192,16 +192,16 @@ path new_initial_solution()
 	marks[vertice] = true;													//LO MARCAMOS COMO VISITADOS
 	s_initial.push_back(vertice);
 
-	while(find(marks.begin(), marks.end(), false)!=marks.end())				
+	while(find(marks.begin(), marks.end(), false)!=marks.end())
 	{
 		vertice = rand() % dimension;
 		if(!marks[vertice])
 		{
-			marks[vertice] = true;				
+			marks[vertice] = true;
 			s_initial.push_back(vertice);
-		}	
+		}
 	}
-	
+
 	s_initial.push_back(vertice_final);
 
 	return s_initial;
@@ -219,11 +219,11 @@ void print_path(path p)
 //OBTIENE UN PAR DE INDICES (I,J) QUE NO SEAN IGUALES DE MANERA ALEATORIA
 pair<long int,long int> get_pair_int()
 {
-	pair<long int, long int> a((rand() % (dimension-1)) + 1,(rand() % (dimension-1)) + 1);	//CREAMOS UN PAR ALEATORIO					
+	pair<long int, long int> a((rand() % (dimension-1)) + 1,(rand() % (dimension-1)) + 1);	//CREAMOS UN PAR ALEATORIO
 
 	while(a.first==a.second)																//MIENTRAS (i,j) SEAN IGUALES
 	{																						//CALCULO UNOS NUEVOS
-		a.first = (rand() % (dimension-1)) + 1;	
+		a.first = (rand() % (dimension-1)) + 1;
 		a.second = (rand() % (dimension-1)) + 1;
 	}
 
@@ -244,7 +244,7 @@ void print_list_tabu()
 void initilizeHistoricalInformation()
 {
 	T.clear();		//INICIALIZAMOS LA LISTA TABU
-	Nx.clear();		//INICIALIZAMOS LA LISTA DE CANDIDATOS										
+	Nx.clear();		//INICIALIZAMOS LA LISTA DE CANDIDATOS
 }
 
 //REALIZA EL PROCESO DE INTENSIFICACION, ES DECIR, LA BUSQUEDA LOCAL DENTRO DE UNA SOLUCION
@@ -258,11 +258,11 @@ path local_search(path s_initial)
 	long int local_max = get_path_cost(s_initial);								//MAXIMO LOCAL INICIAL
 	path s_prima = s_initial;													//CAMINO A RETORNAR, INICIALIZADO CON EL QUE SE RECIBE
 
-	while(cont_iter <= max_it_local)											//MIENTRAS HAYA ITERACIONES 
+	while(cont_iter <= max_it_local)											//MIENTRAS HAYA ITERACIONES
 	{
 		a = get_pair_int();														//CALCULAMOS UN PAR
 		b.first = a.second;
-		b.second = a.first;		
+		b.second = a.first;
 		//if(T.find(a)==T.find(b))												//VERIFICAMO QUE NO EXISTA EN LA LISTA TABU
 		if(find(T.begin(), T.end(), a)==find(T.begin(), T.end(), b))			//VERIFICAMO QUE NO EXISTA EN LA LISTA TABU
 		{
@@ -271,7 +271,7 @@ path local_search(path s_initial)
 			T.push_back(a);
 			swap(s_initial[a.first],s_initial[a.second]);						//INTERCAMBIO LOS ELEMENTOS CONS LOS INDICES DE LOS PARES CREADOS
 			aux = get_path_cost(s_initial);										//CALCULO EL COSTO DEL NUEVO CAMINO
-			if(aux < local_max)													//SI EL NUEVO CAMINO ES MAS BARATO QUE EL QUE TENIA 
+			if(aux < local_max)													//SI EL NUEVO CAMINO ES MAS BARATO QUE EL QUE TENIA
 			{
 				local_max = aux;												//OBTENGO EL NUEVO OPTIMO LOCAL
 				cont_iter = 1;													//REINICIO LAS ITERACIONEs
@@ -281,7 +281,7 @@ path local_search(path s_initial)
 		}
 		cont_iter++;															//SUMO UNA ITERACION
 	}
-	
+
 	return s_prima;																//RETORNO EL MEJOR CAMINO ENCONTRADO
 }
 
@@ -316,7 +316,7 @@ void updateHistoricalInformation(path s_initial)
 
 //BUSCAMOS UNA NUEVA SOLUCION INICIAL QUE NO HAYA SIDO TOMADA
 path findNewSolution()
-{	
+{
 	path new_solution = new_initial_solution();						//CALCULAMOS UNA SOLUCION ALEATORIA
 	while(find(Nx.begin(), Nx.end(), new_solution)!=Nx.end())		//VERIFICAMOS SI NO LA HEMOS TOMADO
 		new_solution = new_initial_solution();						//SI LA TOMAMOS CALCULAMOS OTRA
@@ -327,12 +327,12 @@ path findNewSolution()
 //PROCEDIMIENTO TABU
 path tsp_tabusearch()
 {
-	path s;																	
+	path s;
 	s.clear();
 	path s_initial;
 	path s_prima;
 	long int cont_global;
-	long int cont_iter; 
+	long int cont_iter;
 
 	s_initial = initial_solution();
 	s = s_initial;
@@ -355,7 +355,7 @@ int main()
 	srand (time(NULL));											//INICIALIZAMOS LA SEMILLA
 	clock_t t_begin;											//TIEMPO DE INICIO
 	clock_t t_end;												//TIEMPO FINAL
-	double secs;							
+	double secs;
 
 	input_nodes();												//LEEMOS LOS NODOS
 	create_list_adjacency();									//CREAMOS LA LISTA DE ADYACENCIA
@@ -366,6 +366,6 @@ int main()
 	t_end = clock();											//TOMAMOS EL TIEMPO FINAL DEL PROBLEMA
 	secs = (double)(t_end - t_begin)/CLOCKS_PER_SEC;			//OBTENEMOS LA DIFERENCIA ENTRE EL TIEMPO FINAL Y DE INICIO
 	cout << "TIEMPO: " << secs << " segundos." << endl;			//IMPRIMOS LA CANTIDAD DE SEGUNDOS
-	
+
 	return 0;
 }
